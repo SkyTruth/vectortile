@@ -26,16 +26,30 @@ typemap = {
     datetime: 'Float32',
 }
 typeformatmap = {
+    'Int8': 'b',
+    'Uint8': 'B',
+    'Int16': 'h',
+    'Uint16': 'H',
+    'Int32': 'i',
+    'Uint32': 'I',
     'Float32': 'f',
+    'Float64': 'd'
 }
 typedefaultmap = {
+    'Int8': 0,
+    'Uint8': 0,
+    'Int16': 0,
+    'Uint16': 0,
+    'Int32': 0,
+    'Uint32': 0,
     'Float32': 0.0,
+    'Float64': 0.0
 }
 
-def get_columns(data):
+def get_columns(data, ignore_unsupported = True):
     """
     Gets the column definitions implicit in a dict or list of dicts.
-    If any field which has a datatype that is not in typemap, thows TypeException
+    Throws a TypeException ff any field has a datatype that is not in typemap and ignore_unsupported = False
     """
     # make data iterable
     if type(data) is dict:
@@ -46,6 +60,8 @@ def get_columns(data):
         for key, value in d.iteritems():
             t = type(value)
             if t not in typemap:
+                if ignore_unsupported:
+                    continue
                 raise TypeError ('TypedMatrix: "%s" is not a supported type in field "%s"' % (type(value), key))
             if key not in cols:
                 cols[key] = {'name': key, 'type': typemap[t]}
@@ -130,13 +146,13 @@ def pack(data, extra_header_fields=None, columns=None, orientation='rowwise'):
         for d in data:
             f.write(struct.pack(
                 row_fmt(columns),
-                *[conv(d[colspec['name']], colspec['type'], colspec['default'])
+                *[conv(d.get(colspec['name'], colspec['default']), colspec['type'], colspec['default'])
                   for colspec in colspecs]))
     else:
         for colspec in colspecs:
             f.write(struct.pack(
                 '<%s%s' % (len(data),typeformatmap[colspec['type']]),
-                *[conv(d[colspec['name']], colspec['type'], colspec['default'])
+                *[conv(d.get(colspec['name'], colspec['default']), colspec['type'], colspec['default'])
                   for d in data]))
 
     return f.getvalue()
